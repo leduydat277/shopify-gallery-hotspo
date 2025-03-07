@@ -32,6 +32,10 @@ export const getProduct = async ({ admin }: any) => {
     }
 };
 
+
 export const updateGallery = async (id: string, data: any) => {
     return await Gallery.findByIdAndUpdate(id, data, { new: true });
 };
+
+
+

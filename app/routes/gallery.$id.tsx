@@ -7,6 +7,7 @@ import { getGalleryById, getProduct, updateGallery } from "app/utils/gallery.ser
 import { authenticate } from "../shopify.server";
 
 
+
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
     const gallery = await getGalleryById(params.id);
     const { admin } = await authenticate.admin(request);
