@@ -2,6 +2,7 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json, useFetcher, useLoaderData } from "@remix-run/react";
 import {
+  Link,
   Page
 } from "@shopify/polaris";
 import { Table } from "app/component/IndexTable";
@@ -18,6 +19,9 @@ export default function Index() {
 
   return (
     <Page>
+      <Link url="/app/new">
+        <button>New</button>
+      </Link>
       <Table gallery={data} />
     </Page>
   );

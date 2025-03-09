@@ -6,6 +6,7 @@ import {
 
 } from "@remix-run/node";
 import Gallery from "app/models/gallery.server";
+import { dir } from "console";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
     // await connectDB();
@@ -30,7 +31,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
 
         await newGallery.save();
-        return { success: true, fileUrl: `/uploads/${file.name}` };
+
+        return window.location.href = "/app";
     } catch (error) {
         console.error("❌ Lỗi khi ghi file:", error);
         return { success: false, error: error.message };
