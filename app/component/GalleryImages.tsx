@@ -1,4 +1,5 @@
 import { Card } from "@shopify/polaris";
+import { DropZoneImage } from "./DropZone";
 
 export const GalleryImage = ({
     gallery,
@@ -6,6 +7,7 @@ export const GalleryImage = ({
     setHotspots,
     setSelectedHotspot,
 }: any) => {
+
     const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
         const img = e.currentTarget;
         const rect = img.getBoundingClientRect();
@@ -62,38 +64,42 @@ export const GalleryImage = ({
     return (
         <Card sectioned>
             <div style={{ position: "relative", width: "500px", margin: "0 auto" }}>
-                <img
-                    src={gallery.imageUrl}
-                    alt={gallery.name}
-                    style={{ width: "100%", height: "auto", borderRadius: "8px" }}
-                    onClick={handleImageClick}
-                />
-                {hotspots.map((hotspot: any, index: number) => (
-                    <div
-                        key={hotspot.id}
-                        style={{
-                            position: "absolute",
-                            top: `${hotspot.y}%`,
-                            left: `${hotspot.x}%`,
-                            transform: "translate(-50%, -50%)",
-                            backgroundColor: "blue",
-                            color: "white",
-                            padding: "4px 8px",
-                            borderRadius: "50%",
-                            fontSize: "12px",
-                            cursor: "grab",
-                            border: "2px solid white",
-                            width: "20px",
-                            height: "20px",
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
-                        }}
-                        onMouseDown={handleMouseDown(index)}
-                    >
-                        {index + 1}
-                    </div>
-                ))}
+                {/* {!gallery.imageUrl ? <DropZoneImage /> : */}
+                <>
+                    <img
+                        src={gallery.imageUrl}
+                        alt={gallery.name}
+                        style={{ width: "100%", height: "auto", borderRadius: "8px" }}
+                        onClick={handleImageClick}
+                    />
+                    {hotspots.map((hotspot: any, index: number) => (
+                        <div
+                            key={hotspot.id}
+                            style={{
+                                position: "absolute",
+                                top: `${hotspot.y}%`,
+                                left: `${hotspot.x}%`,
+                                transform: "translate(-50%, -50%)",
+                                backgroundColor: "blue",
+                                color: "white",
+                                padding: "4px 8px",
+                                borderRadius: "50%",
+                                fontSize: "12px",
+                                cursor: "grab",
+                                border: "2px solid white",
+                                width: "20px",
+                                height: "20px",
+                                display: "flex",
+                                justifyContent: "center",
+                                alignItems: "center",
+                            }}
+                            onMouseDown={handleMouseDown(index)}
+                        >
+                            {index + 1}
+                        </div>
+                    ))}
+                </>
+                {/* } */}
             </div>
         </Card>
     );

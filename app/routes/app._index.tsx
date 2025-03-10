@@ -17,9 +17,9 @@ export default function Index() {
   return (
     <Page
       primaryAction={{
-        content: "New",
+        content: "New Gallery",
         disabled: false,
-        onAction: () => navigate("/app/new"),
+        onAction: () => navigate("/app/gallery/new"),
       }}
     >
       <Table gallery={data} />

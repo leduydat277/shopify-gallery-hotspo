@@ -1,4 +1,5 @@
 import Gallery from "app/models/gallery.server";
+import { create } from "domain";
 
 const GET_PRODUCTS = ` 
 query {
@@ -14,28 +15,28 @@ query {
 }
 `
 export const getGalleries = async () => {
-    const galleries = await Gallery.find({}).sort({ createdAt: -1 });
-    return galleries;
+  const galleries = await Gallery.find({}).sort({ createdAt: -1 });
+  return galleries;
 };
 export async function getGalleryById(id: string) {
-    return await Gallery.findById(id);
+  return await Gallery.findById(id);
 }
 
 export const getProduct = async ({ admin }: any) => {
-    try {
-        const response = await admin.graphql(GET_PRODUCTS);
-        const data = await response.json();
-        return data.data.products.edges;
-    } catch (error) {
-        console.error("Error in queryImages:", error);
-        throw error;
-    }
+  try {
+    const response = await admin.graphql(GET_PRODUCTS);
+    const data = await response.json();
+    return data.data.products.edges;
+  } catch (error) {
+    console.error("Error in queryImages:", error);
+    throw error;
+  }
 };
 
 
 export const updateGallery = async (id: string, data: any) => {
-    return await Gallery.findByIdAndUpdate(id, data, { new: true });
+  return await Gallery.findByIdAndUpdate(id, data, { new: true });
 };
-
-
-
+export const createGallery = async (data: any) => {
+  return await Gallery.create(data);
+};

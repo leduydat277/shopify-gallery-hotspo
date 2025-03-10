@@ -4,6 +4,7 @@ import {
     useIndexResourceState,
     Text,
     Thumbnail,
+    TextField,
 } from "@shopify/polaris";
 import { useNavigate } from "@remix-run/react";
 
@@ -29,9 +30,16 @@ export const Table = ({ gallery }: any) => {
             position={index}
         >
             <IndexTable.Cell>
-                <Text variant="bodyMd" fontWeight="bold" as="span">
-                    {name}
-                </Text>
+                <div
+                    onClick={() => handleImageClick(_id)}
+                    style={{ cursor: "pointer" }}
+                >
+                    <Text variant="bodyMd" fontWeight="bold" as="span">
+                        {name}
+                    </Text>
+
+
+                </div>
             </IndexTable.Cell>
             <IndexTable.Cell>
                 <div

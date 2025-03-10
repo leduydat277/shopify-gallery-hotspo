@@ -1,35 +1,47 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "ea98bfbc59e60bd92341721517e2a367"
-application_url = "https://occupation-spider-harry-nitrogen.trycloudflare.com"
+application_url = "https://deadline-trans-trouble-respectively.trycloudflare.com"
 embedded = true
-name = "efficient-conversion-app"
+name = "Galleries"
 handle = "efficient-conversion-app-9"
 
 [build]
-include_config_on_deploy = true
 automatically_update_urls_on_dev = true
+include_config_on_deploy = true
 
 [webhooks]
 api_version = "2025-01"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
 
   [[webhooks.subscriptions]]
   topics = [ "app/uninstalled" ]
   uri = "/webhooks/app/uninstalled"
 
   [[webhooks.subscriptions]]
-  topics = [ "app/scopes_update" ]
-  uri = "/webhooks/app/scopes_update"
+  topics = [ "products/create" ]
+  uri = "/webhooks/products/create"
+
+  [[webhooks.subscriptions]]
+  topics = [ "products/delete" ]
+  uri = "/webhooks/products/delete"
+
+  [[webhooks.subscriptions]]
+  topics = [ "products/update" ]
+  uri = "/webhooks/products/update"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products, read_products"
+scopes = "read_products,write_products"
 
 [auth]
 redirect_urls = [
-  "https://occupation-spider-harry-nitrogen.trycloudflare.com/auth/callback",
-  "https://occupation-spider-harry-nitrogen.trycloudflare.com/auth/shopify/callback",
-  "https://occupation-spider-harry-nitrogen.trycloudflare.com/api/auth/callback"
+  "https://deadline-trans-trouble-respectively.trycloudflare.com/auth/callback",
+  "https://deadline-trans-trouble-respectively.trycloudflare.com/auth/shopify/callback",
+  "https://deadline-trans-trouble-respectively.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]

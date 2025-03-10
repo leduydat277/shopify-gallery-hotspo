@@ -7,7 +7,7 @@ export const HotspotList = ({
     setHotspots,
 }: any) => {
 
-    const [loadingIndex, setLoadingIndex] = useState<number | null>(null);
+    // const [loadingIndex, setLoadingIndex] = useState<number | null>(null);
 
     const handleHotspotDelete = (index: number) => {
         console.log("Deleting hotspot at index:", index);
@@ -16,7 +16,7 @@ export const HotspotList = ({
 
     const handleProductSelectForEdit = async (index: number) => {
         try {
-            setLoadingIndex(index);
+            // setLoadingIndex(index);
             console.log("Opening product picker for hotspot at index:", index);
 
             const { selection } = await shopify.resourcePicker({
@@ -69,7 +69,7 @@ export const HotspotList = ({
                     <div style={{ display: "flex", gap: "8px" }}>
                         <Button
                             onClick={() => handleProductSelectForEdit(index)}
-                            loading={loadingIndex === index}
+                        // loading={loadingIndex === index}
                         >
                             <Icon source={EditIcon} />
                         </Button>

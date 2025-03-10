@@ -1,6 +1,7 @@
+
 import { useState } from "react";
 import { LoaderFunctionArgs } from "@remix-run/node";
-import { useLoaderData, Form } from "@remix-run/react";
+import { useLoaderData, Form, useFetcher } from "@remix-run/react";
 import { json } from "@remix-run/node";
 import {
     Page,
@@ -11,46 +12,90 @@ import {
     BlockStack,
     Divider,
     Box,
+    TextField,
 } from "@shopify/polaris";
 import {
     getGalleryById,
     getProduct,
     updateGallery,
+    createGallery,
 } from "app/utils/gallery.server";
 import { authenticate } from "../shopify.server";
 import { SaveIcon } from "@shopify/polaris-icons";
 import { GalleryImage } from "app/component/GalleryImages";
 import { HotspotList } from "app/component/HotPostList";
+import path from "path";
+import fs from "fs/promises";
 
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
-    console.log("Gallery ID:", params.id);
+    if (params.id === "new") {
+        return json({
+            gallery: {
+                _id: null,
+                name: "",
+                imageUrl: "",
+                hotspots: [],
+                createdAt: "",
+            },
+            products: [],
+        });
+    }
+
     const gallery = await getGalleryById(params.id);
     const { admin } = await authenticate.admin(request);
     const products = await getProduct({ admin });
+
     return json({ gallery, products });
 };
 
 export const action = async ({ request, params }: LoaderFunctionArgs) => {
-    const { admin } = await authenticate.admin(request);
     const formData = await request.formData();
     const galleryId = params.id;
+    const action = formData.get("action");
 
-    const updatedHotspots = formData
-        .getAll("hotspot")
-        .map((hotspotStr: string) => JSON.parse(hotspotStr));
+    try {
+        const name = formData.get("name") as string;
 
-    console.log("Saved hotspots:", updatedHotspots);
+        if (action === "new" || galleryId === "new") {
+            const uploadDir = path.resolve("public/uploads");
+            await fs.mkdir(uploadDir, { recursive: true });
 
-    await updateGallery(galleryId, { hotspots: updatedHotspots });
-    return json({ success: true });
+            const file = formData.get("file") as File;
+            if (!file || !(file instanceof File)) {
+                throw new Error("❌ No file uploaded!");
+            }
+
+            const filePath = path.join(uploadDir, file.name);
+            await fs.writeFile(filePath, Buffer.from(await file.arrayBuffer()));
+
+            const newGallery = await createGallery({
+                name,
+                imageUrl: `/uploads/${file.name}`,
+                hotspots: [],
+            });
+
+            return json({ success: true, message: "Gallery created successfully!", gallery: newGallery });
+        }
+
+        const updatedHotspots = formData
+            .getAll("hotspot")
+            .map((hotspotStr: string) => JSON.parse(hotspotStr));
+
+        await updateGallery(galleryId, { hotspots: updatedHotspots });
+
+        return json({ success: true });
+    } catch (error) {
+        console.error("❌ Error processing request:", error);
+        return json({ success: false, error: error.message });
+    }
 };
 
 function GalleryDetail() {
     const { gallery, products } = useLoaderData<typeof loader>();
-    const [hotspots, setHotspots] = useState<
-        { id: string; x: number; y: number; productId?: number }[]
-    >(gallery.hotspots || []);
+    const [name, setName] = useState(gallery.name);
+    const [hotspots, setHotspots] = useState(gallery.hotspots || []);
     const [selectedHotspot, setSelectedHotspot] = useState<number | null>(null);
+    const fetcher = useFetcher();
 
     const createRandomHotspot = () => {
         const randomX = Math.random() * 100;
@@ -64,20 +109,24 @@ function GalleryDetail() {
         setHotspots((prev) => [...prev, newHotspot]);
     };
 
+    const handleSave = () => {
+        const formData = new FormData(document.getElementById("galleryForm"));
+        formData.append("name", name);
+        formData.append("action", gallery._id ? "update" : "new");
+
+        fetcher.submit(formData, {
+            method: "post",
+            encType: "multipart/form-data",
+        });
+    };
+
     return (
         <Page
             backAction={{ content: "Back to Galleries", url: "/app" }}
             title="Gallery Detail"
-            secondaryActions={[
-                {
-                    content: "Save",
-                    icon: SaveIcon,
-                    onAction: () => document.getElementById("galleryForm")?.submit(),
-
-                },
-            ]}
+            primaryAction={{ content: "Save", onAction: handleSave }}
         >
-            <Form method="post" id="galleryForm">
+            <Form method="post" id="galleryForm" encType="multipart/form-data">
                 {hotspots.map((hotspot) => (
                     <input
                         key={hotspot.id}
@@ -91,14 +140,33 @@ function GalleryDetail() {
                     <BlockStack gap="400">
                         <Card roundedAbove="sm">
                             <BlockStack gap="400">
-                                <Text as="h2" variant="headingMd">Name: {gallery.name}</Text>
-                                <Text as="h2" variant="headingMd">File Name: {gallery.imageUrl}</Text>
+                                <TextField
+                                    label="Name"
+                                    value={name}
+                                    autoComplete="off"
+                                    onChange={(value) => setName(value)}
+                                    name="name"
+                                />
+                                {!gallery.imageUrl ? (
+                                    <Box>
+                                        <label h htmlFor="file-upload">
+                                            <Text>Upload Image</Text>
+                                            <input type="file" id="file" name="file" />
+                                        </label>
+                                    </Box>
+                                ) : null}
+
+                                <Text as="h2" variant="headingMd">
+                                    File Name: {gallery.imageUrl}
+                                </Text>
                             </BlockStack>
                         </Card>
 
                         <Card roundedAbove="sm">
                             <BlockStack gap="400">
-                                <Text as="h2" variant="headingMd">Media</Text>
+                                <Text as="h2" variant="headingMd">
+                                    Media
+                                </Text>
                                 <GalleryImage
                                     gallery={gallery}
                                     hotspots={hotspots}
@@ -114,7 +182,9 @@ function GalleryDetail() {
                     <BlockStack gap={{ xs: "400", md: "200" }}>
                         <Card roundedAbove="sm">
                             <BlockStack gap="400">
-                                <Text as="h2" variant="headingMd">Information</Text>
+                                <Text as="h2" variant="headingMd">
+                                    Information
+                                </Text>
                                 <Button onClick={createRandomHotspot}>Add Hotspot</Button>
                                 <Text as="h2" variant="headingMd">
                                     Total Hotspots: {hotspots.length}
@@ -131,8 +201,6 @@ function GalleryDetail() {
                         </Card>
                     </BlockStack>
                 </InlineGrid>
-
-
             </Form>
         </Page>
     );
