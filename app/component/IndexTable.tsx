@@ -1,19 +1,36 @@
+import { Form, Link } from "@remix-run/react";
 import {
     IndexTable,
     LegacyCard,
+    useIndexResourceState,
     Text,
     Thumbnail,
+    useBreakpoints,
 } from "@shopify/polaris";
-import { Link } from "@remix-run/react";
+import { DeleteIcon } from "@shopify/polaris-icons";
+import React from "react";
 
-export const Table = ({ gallery }: any) => {
+export const Table = ({ gallery, onDelete }) => {
     const resourceName = {
         singular: "gallery",
         plural: "galleries",
     };
 
+    const {
+        selectedResources,
+        allResourcesSelected,
+        handleSelectionChange,
+    } = useIndexResourceState(gallery, {
+        resourceIDResolver: (galleryItem) => galleryItem._id,
+    });
+
     const rowMarkup = gallery.map(({ _id, name, imageUrl, createdAt }, index) => (
-        <IndexTable.Row id={_id} key={_id} position={index}>
+        <IndexTable.Row
+            id={_id}
+            key={_id}
+            position={index}
+            selected={selectedResources.includes(_id)}
+        >
             <IndexTable.Cell>
                 <Link to={`/app/gallery/${_id}`} style={{ textDecoration: "none", color: "inherit" }}>
                     <Text variant="bodyMd" fontWeight="bold" as="span">
@@ -28,13 +45,27 @@ export const Table = ({ gallery }: any) => {
         </IndexTable.Row>
     ));
 
+    const bulkActions = [
+        {
+            icon: DeleteIcon,
+            destructive: true,
+            content: "Delete galleries",
+            onAction: () => onDelete(selectedResources),
+        },
+    ];
+
     return (
         <LegacyCard>
             <IndexTable
+                condensed={useBreakpoints().smDown}
                 resourceName={resourceName}
                 itemCount={gallery.length}
-                selectable={false}
+                selectedItemsCount={
+                    allResourcesSelected ? "All" : selectedResources.length
+                }
+                onSelectionChange={handleSelectionChange}
                 headings={[{ title: "Name" }, { title: "Image" }, { title: "Date" }]}
+                bulkActions={bulkActions}
             >
                 {rowMarkup}
             </IndexTable>

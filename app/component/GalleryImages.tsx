@@ -6,6 +6,7 @@ export const GalleryImage = ({
     hotspots,
     setHotspots,
     setSelectedHotspot,
+    previewImageUrl
 }: any) => {
 
     const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
@@ -67,7 +68,7 @@ export const GalleryImage = ({
                 {/* {!gallery.imageUrl ? <DropZoneImage /> : */}
                 <>
                     <img
-                        src={gallery.imageUrl}
+                        src={gallery.imageUrl || previewImageUrl}
                         alt={gallery.name}
                         style={{ width: "100%", height: "auto", borderRadius: "8px" }}
                         onClick={handleImageClick}

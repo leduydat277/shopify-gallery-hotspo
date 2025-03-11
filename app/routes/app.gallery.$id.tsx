@@ -1,8 +1,8 @@
-
 import { useState } from "react";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { useLoaderData, Form, useFetcher, useNavigate } from "@remix-run/react";
 import { json } from "@remix-run/node";
+import { SaveBar } from "@shopify/app-bridge-react";
 import {
     Page,
     Button,
@@ -13,6 +13,7 @@ import {
     Divider,
     Box,
     TextField,
+    InlineStack,
 } from "@shopify/polaris";
 
 import {
@@ -30,6 +31,7 @@ import { HotspotList } from "app/component/HotPostList";
 import path from "path";
 import fs from "fs/promises";
 import { DropZoneImage } from "app/component/DropZone";
+import useLeaveConfirmation from "app/utils/useLeaveConfirmation";
 
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
     if (params.id === "new") {
@@ -71,14 +73,37 @@ export const action = async ({ request, params }: LoaderFunctionArgs) => {
 
             const filePath = path.join(uploadDir, file.name);
             await fs.writeFile(filePath, Buffer.from(await file.arrayBuffer()));
+            const crateHotspots = formData
+                .getAll("hotspot")
+                .map((hotspotStr) => {
+                    try {
+                        return JSON.parse(hotspotStr);
+                    } catch (err) {
+                        console.error("❌ Error parsing hotspot data:", err);
+                        return null;
+                    }
+                })
+                .filter(Boolean);
+            console.log("createHotspot", crateHotspots);
 
             const newGallery = await createGallery({
                 name,
                 imageUrl: `/uploads/${file.name}`,
-                hotspots: [],
+                hotspots: {
+                    productUrl: "default",
+                    productId: crateHotspots[0].productId,
+                    productName: crateHotspots[0].productName,
+                    productImage: "default",
+                    x: crateHotspots[0].x,
+                    y: crateHotspots[0].y,
+                },
             });
 
-            return json({ success: true, message: "Gallery created successfully!", gallery: newGallery });
+            return json({
+                success: true,
+                message: "Gallery created successfully!",
+                gallery: newGallery,
+            });
         }
 
         if (action === "delete") {
@@ -88,14 +113,33 @@ export const action = async ({ request, params }: LoaderFunctionArgs) => {
 
         if (action === "duplicate") {
             const newGallery = await duplicateGallery(galleryId);
-            return json({ success: true, message: "Gallery duplicated successfully!", gallery: newGallery });
+            return json({
+                success: true,
+                message: "Gallery duplicated successfully!",
+                gallery: newGallery,
+            });
         }
 
-        const updatedHotspots = formData
-            .getAll("hotspot")
-            .map((hotspotStr: string) => JSON.parse(hotspotStr));
+        if (action === "update") {
+            const updatedHotspots = formData
+                .getAll("hotspot")
+                .map((hotspotStr) => {
+                    try {
+                        return JSON.parse(hotspotStr);
+                    } catch (err) {
+                        console.error("❌ Error parsing hotspot data:", err);
+                        return null;
+                    }
+                })
+                .filter(Boolean);
 
-        await updateGallery(galleryId, { hotspots: updatedHotspots });
+            await updateGallery(galleryId, {
+                hotspots: updatedHotspots,
+                name: name || "",
+            });
+
+            return json({ success: true });
+        }
 
         return json({ success: true });
     } catch (error) {
@@ -107,17 +151,19 @@ export const action = async ({ request, params }: LoaderFunctionArgs) => {
 function GalleryDetail() {
     const { gallery, products } = useLoaderData<typeof loader>();
     const [name, setName] = useState(gallery.name);
-    const [loading, setLoading] = useState(false);
+    const [originalName, setOriginalName] = useState(gallery.name);
     const [file, setFile] = useState<File | null>(null);
     const [hotspots, setHotspots] = useState(gallery.hotspots || []);
     const [selectedHotspot, setSelectedHotspot] = useState<number | null>(null);
-    const [modalActive, setModalActive] = useState(false);
+    const [unsavedChanges, setUnsavedChanges] = useState(false);
+    const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(
+        gallery.imageUrl || null,
+    );
+    console.log("previewImageUrl", previewImageUrl);
+
     const fetcher = useFetcher();
     const navigate = useNavigate();
-
-
     const isNewGallery = !gallery._id;
-    const galleryId = gallery._id;
     const createRandomHotspot = () => {
         const randomX = Math.random() * 100;
         const randomY = Math.random() * 100;
@@ -132,17 +178,22 @@ function GalleryDetail() {
 
     const handleFileUpload = (uploadedFile: File) => {
         setFile(uploadedFile);
+        setPreviewImageUrl(URL.createObjectURL(uploadedFile));
     };
 
     const handleSave = () => {
-
         const formData = new FormData(document.getElementById("galleryForm"));
+        console.log("formData", formData);
         formData.append("name", name);
         formData.append("action", isNewGallery ? "new" : "update");
 
         if (file) {
             formData.append("file", file);
         }
+
+        hotspots.forEach((hotspot) => {
+            formData.append("hotspot", JSON.stringify(hotspot));
+        });
 
         fetcher.submit(formData, {
             method: "post",
@@ -151,9 +202,10 @@ function GalleryDetail() {
 
         fetcher.state === "idle" && navigate("/app");
     };
+
     const showModal = async () => {
-        await shopify.modal.show('my-modal')
-    }
+        await shopify.modal.show("my-modal");
+    };
 
     const handleDelete = async () => {
         const formData = new FormData(document.getElementById("galleryForm"));
@@ -164,12 +216,16 @@ function GalleryDetail() {
             encType: "multipart/form-data",
         });
 
-        await shopify.modal.hide('my-modal')
+        await shopify.modal.hide("my-modal");
 
         fetcher.state === "idle" && navigate("/app");
-    }
+    };
 
-    const handleDuplicate = () => {
+    const handleDuplicate = async () => {
+        await shopify.modal.show("duplicate-modal");
+    };
+
+    const handleConfirmDuplicate = () => {
         const formData = new FormData(document.getElementById("galleryForm"));
         formData.append("action", "duplicate");
 
@@ -177,37 +233,84 @@ function GalleryDetail() {
             method: "post",
             encType: "multipart/form-data",
         });
+
+        shopify.modal.hide("duplicate-modal");
+
         fetcher.state === "idle" && navigate("/app");
-    }
+    };
 
     const isSubmitting = fetcher.state === "submitting";
+    const handleSave2 = () => {
+        handleSave();
+        shopify.saveBar.hide("my-save-bar");
+    };
+
+    const handleDiscard = () => {
+        if (!originalName) {
+            return navigate("/app");
+        }
+        setName(originalName);
+        shopify.saveBar.hide("my-save-bar");
+        console.log("Discarding changes, reverting to:", originalName);
+    };
+    const handleNameChange = (value: string) => {
+        setName(value);
+        setUnsavedChanges(true)
+        shopify.saveBar.show("my-save-bar");
+    };
+    console.log("setPreviewImageUrl", previewImageUrl);
 
 
-
+    const handleBack = () => {
+        shopify.saveBar.leaveConfirmation().then(() => {
+            navigate("/app");
+        });
+    }
     return (
         <Page
-            backAction={{ content: "Back to Galleries", url: "/app" }}
+            backAction={{ content: "Back to Galleries", onAction: handleBack }}
             title={isNewGallery ? "Create New Gallery" : "Gallery Detail"}
-            primaryAction={{
-                content: isSubmitting ? "Saving..." : "Save",
-                disabled: isSubmitting,
-                onAction: handleSave,
-            }}
-            secondaryActions={[{
-                content: 'Duplicate',
-                accessibilityLabel: 'Secondary action label',
-                onAction: handleDuplicate,
-            },
-            {
-                content: 'Delete',
-                accessibilityLabel: 'Secondary action label',
-                onAction: showModal,
-            }]}
+            secondaryActions={
+                isNewGallery
+                    ? []
+                    : [
+                        {
+                            content: "Duplicate",
+                            accessibilityLabel: "Duplicate this gallery",
+                            onAction: handleDuplicate,
+                        },
+                    ]
+            }
         >
+            <>
+                <SaveBar id="my-save-bar">
+                    <button variant="primary" onClick={handleSave2}></button>
+                    <button onClick={handleDiscard}></button>
+                </SaveBar>
+            </>
+            <ui-modal id="duplicate-modal">
+                <p>Are you sure you want to duplicate this gallery?</p>
+                <ui-title-bar title="Duplicate Gallery">
+                    <button variant="primary" onClick={handleConfirmDuplicate}>
+                        Duplicate
+                    </button>
+                    <button
+                        onClick={async () => await shopify.modal.hide("duplicate-modal")}
+                    >
+                        Cancel
+                    </button>
+                </ui-title-bar>
+            </ui-modal>
+
             <ui-modal id="my-modal">
                 <p>Are you sure you want to delete this gallery</p>
                 <ui-title-bar title="Delete Gallery">
-                    <button variant="primary" onClick={handleDelete}>Delete</button>
+                    <button variant="primary" onClick={handleDelete}>
+                        Delete
+                    </button>
+                    <button onClick={async () => await shopify.modal.hide("my-modal")}>
+                        Cancel
+                    </button>
                 </ui-title-bar>
             </ui-modal>
             <Form method="post" id="galleryForm" encType="multipart/form-data">
@@ -219,18 +322,31 @@ function GalleryDetail() {
                                     label="Name"
                                     value={name}
                                     autoComplete="off"
-                                    onChange={(value) => setName(value)}
+                                    onChange={(value) => handleNameChange(value)}
                                     name="name"
-                                />{isNewGallery ?
+                                />
+                                {/* {previewImageUrl && isNewGallery && ( */}
+                                <>
                                     <Box>
                                         <label htmlFor="file-upload">
                                             <Text>Upload Image</Text>
                                             <DropZoneImage onFileUpload={handleFileUpload} />
                                         </label>
                                     </Box>
-                                    : null}
 
-                                {gallery.imageUrl && !isNewGallery && (
+                                    <GalleryImage
+                                        gallery={gallery}
+                                        hotspots={hotspots}
+                                        setHotspots={setHotspots}
+                                        products={products}
+                                        selectedHotspot={selectedHotspot}
+                                        setSelectedHotspot={setSelectedHotspot}
+                                        previewImageUrl={previewImageUrl}
+                                    />
+                                </>
+                                {/* )} */}
+
+                                {gallery.imageUrl && !isNewGallery && previewImageUrl && (
                                     <Text as="h2" variant="headingMd">
                                         File Name: {gallery.imageUrl}
                                     </Text>
@@ -255,34 +371,72 @@ function GalleryDetail() {
                         )}
                     </BlockStack>
 
-                    {!isNewGallery && (
-                        <BlockStack gap={{ xs: "400", md: "200" }}>
-                            <Card roundedAbove="sm">
-                                <BlockStack gap="400">
-                                    <Text as="h2" variant="headingMd">
-                                        Information
-                                    </Text>
-                                    <Button onClick={createRandomHotspot}>Add Hotspot</Button>
-                                    <Text as="h2" variant="headingMd">
-                                        Total Hotspots: {hotspots.length}
-                                    </Text>
-                                    <Divider />
-                                    <HotspotList
-                                        hotspots={hotspots}
-                                        products={products}
-                                        setHotspots={setHotspots}
-                                        selectedHotspot={selectedHotspot}
-                                        setSelectedHotspot={setSelectedHotspot}
-                                    />
-                                </BlockStack>
-                            </Card>
-                        </BlockStack>
-                    )}
+                    {/* {!isNewGallery && ( */}
+                    <BlockStack gap={{ xs: "400", md: "200" }}>
+                        <Card roundedAbove="sm">
+                            <BlockStack gap="400">
+                                <Text as="h2" variant="headingMd">
+                                    Information
+                                </Text>
+                                <Button onClick={createRandomHotspot}>Add Hotspot</Button>
+                                <Text as="h2" variant="headingMd">
+                                    Total Hotspots: {hotspots.length}
+                                </Text>
+                                <Divider />
+                                <HotspotList
+                                    hotspots={hotspots}
+                                    products={products}
+                                    setHotspots={setHotspots}
+                                    selectedHotspot={selectedHotspot}
+                                    setSelectedHotspot={setSelectedHotspot}
+                                />
+                            </BlockStack>
+                        </Card>
+                    </BlockStack>
+                    {/* )} */}
                 </InlineGrid>
+                {isNewGallery ? (
+                    <InlineStack align="end" gap="400">
+                        <Button
+                            submit
+                            loading={isSubmitting}
+                            onClick={handleSave}
+                            tone="primary"
+                            variant="primary"
+                        >
+                            {isNewGallery ? "Create Gallery" : "Save Gallery"}
+                        </Button>
+                    </InlineStack>
+                ) : (
+                    <Divider />
+                )}
+                {!isNewGallery ? (
+                    <InlineStack align="end" gap="400">
+
+                        <Button
+                            tone="critical"
+                            variant="primary"
+                            submit
+                            onClick={showModal}
+                        >
+                            Delete
+                        </Button>
+                        <Button
+                            submit
+                            loading={isSubmitting}
+                            onClick={handleSave}
+                            tone="primary"
+                            variant="primary"
+                        >
+                            {isNewGallery ? "Create Gallery" : "Save"}
+                        </Button>
+                    </InlineStack>
+                ) : (
+                    <Divider />
+                )}
             </Form>
         </Page>
     );
 }
 
 export default GalleryDetail;
-
