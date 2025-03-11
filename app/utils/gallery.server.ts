@@ -40,3 +40,18 @@ export const updateGallery = async (id: string, data: any) => {
 export const createGallery = async (data: any) => {
   return await Gallery.create(data);
 };
+
+export const deleteGallery = async (id: string) => {
+  return await Gallery.findByIdAndDelete(id);
+};
+
+export const duplicateGallery = async (id: string) => {
+  const gallery = await getGalleryById(id);
+  const data = {
+    name: `Copy of ${gallery.name}`,
+    imageUrl: gallery.imageUrl,
+    hotspots: gallery.hotspots,
+  }
+  const newGallery = await createGallery(data);
+  return newGallery;
+};

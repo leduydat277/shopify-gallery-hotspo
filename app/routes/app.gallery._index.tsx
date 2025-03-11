@@ -11,7 +11,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export default function Index() {
     const { data } = useLoaderData<typeof loader>();
-    console.log("data.data", data);
+    // console.log("data.data", data);
     //https://admin.shopify.com/store/my-dev-store-hihi-haha/apps/efficient-conversion-app-9/app/gallery/new
 
     const navigate = useNavigate();

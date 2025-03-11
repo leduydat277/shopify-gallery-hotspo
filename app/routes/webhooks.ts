@@ -18,6 +18,7 @@ export const action: ActionFunction = async ({ request }) => {
             break;
         case "PRODUCTS_DELETE":
             console.log(" Product deleted:", payload.id);
+
             break;
         default:
             console.log("Unhandled event:", topic);

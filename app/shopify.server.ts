@@ -5,9 +5,11 @@ import {
   shopifyApp,
   DeliveryMethod
 } from "@shopify/shopify-app-remix/server";
+import { RedisClientOptions, createClient } from 'redis';
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
-
+import { RedisSessionStorage } from "@shopify/shopify-app-session-storage-redis";
+const client = createClient({ url: process.env.REDIS_URL } as RedisClientOptions);
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
@@ -20,19 +22,25 @@ const shopify = shopifyApp({
       deliveryMethod: DeliveryMethod.Http,
       callbackUrl: "/webhooks",
     },
-    PRODUCTS_CREATE: {
-      deliveryMethod: DeliveryMethod.Http,
-      callbackUrl: "/webhooks",
-    },
-    PRODUCTS_DELETE: {
-      deliveryMethod: DeliveryMethod.Http,
-      callbackUrl: "/webhooks",
-    },
   },
-  sessionStorage: new PrismaSessionStorage(prisma),
+  hooks: {
+    afterAuth: async ({ session }) => {
+      const result = await shopify.registerWebhooks({ session });
+      console.log('registerWebhooks', result);
+      console.log('registerWebhooks', result);
+      console.log('registerWebhooks', result);
+      console.log('registerWebhooks', result);
+      console.log('registerWebhooks', result);
+      console.log('registerWebhooks', result);
+      console.log('registerWebhooks', result);
+      console.log('registerWebhooks', result);
+      console.log('registerWebhooks', result);
+
+    }
+  },
+  sessionStorage: new RedisSessionStorage(client),
   distribution: AppDistribution.AppStore,
   future: {
-
     unstable_newEmbeddedAuthStrategy: true,
     removeRest: true,
   },
