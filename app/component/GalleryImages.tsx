@@ -1,107 +1,75 @@
+import { useEffect, useState } from "react";
 import { Card } from "@shopify/polaris";
-import { DropZoneImage } from "./DropZone";
+import { DndContext } from "@dnd-kit/core";
+import { useDraggable } from '@dnd-kit/core';
 
 export const GalleryImage = ({
+    newHotspots,
     gallery,
-    hotspots,
-    setHotspots,
-    setSelectedHotspot,
     previewImageUrl
 }: any) => {
+    const [hotspots, setHotspots] = useState(newHotspots || []);
 
-    const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
-        const img = e.currentTarget;
-        const rect = img.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
+    useEffect(() => {
+        setHotspots(newHotspots);
+    }, [newHotspots]);
 
-        const newHotspot = { id: `${Date.now()}`, x, y, productId: null };
-        setHotspots((prev: any) => [...prev, newHotspot]);
-        setSelectedHotspot(hotspots.length);
+    const handleDragEnd = (event: any) => {
+        const { active, delta } = event;
+
+        const updatedHotspots = hotspots.map((hotspot) =>
+            hotspot._id === active.id
+                ? {
+                    ...hotspot,
+                    x: Math.min(100, Math.max(0, hotspot.x + (delta.x / 500) * 100)),
+                    y: Math.min(100, Math.max(0, hotspot.y + (delta.y / 500) * 100)),
+                }
+                : hotspot
+        );
+
+        setHotspots(updatedHotspots);
+        console.log("Updated hotspots:", updatedHotspots);
     };
 
-    const handleMouseDown =
-        (index: number) => (e: React.MouseEvent<HTMLDivElement>) => {
-            e.preventDefault();
-            setSelectedHotspot(index);
+    return (
+        <DndContext onDragEnd={handleDragEnd}>
+            <div style={{ position: "relative", width: "500px", height: "500px", margin: "0 auto" }}>
+                <img
+                    src={gallery.imageUrl || previewImageUrl}
+                    alt={gallery.name}
+                    style={{ width: "100%", height: "100%", borderRadius: "8px" }}
+                />
+                {hotspots.map((hotspot) => (
+                    <DraggableHotspot key={hotspot._id} id={hotspot._id} x={hotspot.x} y={hotspot.y} />
+                ))}
+            </div>
+        </DndContext>
+    );
+};
 
-            const img = e.currentTarget.parentElement?.querySelector("img");
-            if (!img) return;
+const DraggableHotspot = ({ id, x, y }: any) => {
+    const { attributes, listeners, setNodeRef, transform } = useDraggable({ id });
 
-            const rect = img.getBoundingClientRect();
-            const startX = e.clientX;
-            const startY = e.clientY;
-            let startXPercent = hotspots[index].x;
-            let startYPercent = hotspots[index].y;
-
-            const handleMouseMove = (moveEvent: MouseEvent) => {
-                const dx = ((moveEvent.clientX - startX) / rect.width) * 100;
-                const dy = ((moveEvent.clientY - startY) / rect.height) * 100;
-
-                const newX = Math.min(100, Math.max(0, startXPercent + dx));
-                const newY = Math.min(100, Math.max(0, startYPercent + dy));
-
-                console.log("Dragging hotspot:", index);
-                console.log("Old position:", { x: startXPercent, y: startYPercent });
-                console.log("New position:", { x: newX, y: newY });
-
-                setHotspots((prev: any) =>
-                    prev.map((hotspot: any, i: number) =>
-                        i === index ? { ...hotspot, x: newX, y: newY } : hotspot,
-                    ),
-                );
-            };
-
-            const handleMouseUp = () => {
-                console.log("Hotspot released:", index);
-                document.removeEventListener("mousemove", handleMouseMove);
-                document.removeEventListener("mouseup", handleMouseUp);
-            };
-
-            document.addEventListener("mousemove", handleMouseMove);
-            document.addEventListener("mouseup", handleMouseUp);
-        };
+    const style = {
+        position: "absolute",
+        top: `${y}%`,
+        left: `${x}%`,
+        transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : "none",
+        width: "20px",
+        height: "20px",
+        backgroundColor: "blue",
+        borderRadius: "50%",
+        cursor: "grab",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        color: "white",
+        fontSize: "12px",
+    };
 
     return (
-        <Card sectioned>
-            <div style={{ position: "relative", width: "500px", margin: "0 auto" }}>
-                {/* {!gallery.imageUrl ? <DropZoneImage /> : */}
-                <>
-                    <img
-                        src={gallery.imageUrl || previewImageUrl}
-                        alt={gallery.name}
-                        style={{ width: "100%", height: "auto", borderRadius: "8px" }}
-                        onClick={handleImageClick}
-                    />
-                    {hotspots.map((hotspot: any, index: number) => (
-                        <div
-                            key={hotspot.id}
-                            style={{
-                                position: "absolute",
-                                top: `${hotspot.y}%`,
-                                left: `${hotspot.x}%`,
-                                transform: "translate(-50%, -50%)",
-                                backgroundColor: "blue",
-                                color: "white",
-                                padding: "4px 8px",
-                                borderRadius: "50%",
-                                fontSize: "12px",
-                                cursor: "grab",
-                                border: "2px solid white",
-                                width: "20px",
-                                height: "20px",
-                                display: "flex",
-                                justifyContent: "center",
-                                alignItems: "center",
-                            }}
-                            onMouseDown={handleMouseDown(index)}
-                        >
-                            {index + 1}
-                        </div>
-                    ))}
-                </>
-                {/* } */}
-            </div>
-        </Card>
+        <div ref={setNodeRef} {...listeners} {...attributes} style={style}>
+            {id}
+        </div>
     );
 };
